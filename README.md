@@ -1,7 +1,4 @@
 # memory-game
-<<<<<<< HEAD
-A simple memory card matching game where players flip cards to find matching pairs.
-=======
 
 ## About the Project
 
@@ -43,4 +40,3 @@ Developed by:
 
 - GitHub: [EvgMarty](https://github.com/EvgMarty)
 - LinkedIn: [Yevhen Martyniuk](https://www.linkedin.com/in/evgmarty/)
->>>>>>> 9863aaf (Initial commit)
