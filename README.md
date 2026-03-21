@@ -29,6 +29,10 @@ At the current stage, the project is a frontend prototype with the visual struct
 
 The interface design is already in place, and the core game functionality is planned for the next stage of development.
 
+## Live Demo
+
+👉 [Visit the Website](https://evgmarty.github.io/memory-game/)
+
 ## Author
 
 Developed by:
