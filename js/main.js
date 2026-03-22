@@ -81,6 +81,25 @@
         self.updatePairsFromSelect()
         self.startNewGame()
       })
+
+      ui.grid.addEventListener('click', function (event) {
+        let tile = event.target.closest('.tile')
+        if (tile) {
+          self.onTileClick(tile)
+        }
+      })
+
+      ui.restartButton.addEventListener('click', function () {
+        self.startNewGame()
+      })
+
+      ui.playAgainButton.addEventListener('click', function () {
+        self.startNewGame()
+      })
+
+      ui.closeButton.addEventListener('click', function () {
+        self.closeWinOverlay()
+      })
     },
 
     updatePairsFromSelect: function () {
@@ -105,7 +124,7 @@
       state.firstTile = null
       state.secondTile = null
       state.isLocked = false
-      state.matchedPairs = 6
+      state.matchedPairs = 0
       state.moves = 0
       state.seconds = 0
       state.isStarted = false
@@ -166,6 +185,97 @@
         tiles[i].dataset.value = this.deck[i].value
         emojis[i].textContent = this.deck[i].value
       }
+    },
+
+    onTileClick: function (tile) {
+      let state = this.state
+      if (state.isLocked) return
+      if (tile.classList.contains('is-flipped')) return
+      if (!state.isStarted) {
+        state.isStarted = true
+        this.startTimer()
+      }
+      tile.classList.add('is-flipped')
+      if (!state.firstTile) {
+        state.firstTile = tile
+        return
+      }
+      state.secondTile = tile
+      state.isLocked = true
+
+      state.moves += 1
+      ui.moves.textContent = state.moves
+
+      this.checkPair()
+    },
+
+    startTimer: function () {
+      let self = this
+
+      if (this.state.timerId) return
+      this.state.timerId = setInterval(function () {
+        self.state.seconds += 1
+        ui.time.textContent = self.formatTime(self.state.seconds)
+      }, 1000)
+    },
+
+    formatTime: function (seconds) {
+      let min = Math.floor(seconds / 60)
+      let restSeconds = seconds % 60
+      return min + ':' + String(restSeconds).padStart(2, 0)
+    },
+
+    checkPair: function () {
+      let state = this.state
+      if (state.firstTile.dataset.value === state.secondTile.dataset.value) {
+        this.handleMatch()
+      } else {
+        this.handleMissMatch()
+      }
+    },
+
+    handleMatch: function () {
+      let state = this.state
+      state.firstTile.classList.add('is-matched')
+      state.secondTile.classList.add('is-matched')
+
+      state.matchedPairs += 1
+      ui.pairs.textContent = state.matchedPairs + '/' + this.totalPairs
+
+      this.clearSelection()
+
+      if (state.matchedPairs === this.totalPairs) {
+        this.showWin()
+      }
+    },
+
+    handleMissMatch: function () {
+      let self = this
+
+      setTimeout(function () {
+        self.state.firstTile.classList.remove('is-flipped')
+        self.state.secondTile.classList.remove('is-flipped')
+        self.clearSelection()
+      }, 700)
+    },
+
+    clearSelection: function () {
+      this.state.firstTile = null
+      this.state.secondTile = null
+      this.state.isLocked = false
+    },
+
+    showWin: function () {
+      clearInterval(this.state.timerId)
+
+      ui.winText.textContent =
+        'Moves: ' +
+        this.state.moves +
+        '\n' +
+        'Time: ' +
+        this.formatTime(this.state.seconds)
+
+      ui.overlay.classList.add('is-open')
     },
   }
 
