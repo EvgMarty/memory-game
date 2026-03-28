@@ -52,7 +52,113 @@
     '🍣',
   ]
 
-  const sound = []
+  const sound = {
+    context: null,
+    masterGain: null,
+    enabled: true,
+    volume: 0.3,
+
+    init: function () {
+      if (!this.enabled) return
+
+      this.context = new (window.AudioContext || window.webkitAudioContext)()
+      this.masterGain = this.context.createGain()
+      this.masterGain.connect(this.context.destination)
+      this.bindVolumeControls()
+
+      let unlock = function () {
+        if (sound.context && sound.context.state === 'suspended') {
+          sound.context.resume()
+        }
+        document.removeEventListener('pointerdown', unlock)
+        document.removeEventListener('keydown', unlock)
+      }
+
+      document.addEventListener('pointerdown', unlock)
+      document.addEventListener('keydown', unlock)
+    },
+
+    bindVolumeControls: function () {
+      if (!ui.volume || !ui.volumeValue) {
+        this.setVolume(this.volume)
+        return
+      }
+
+      ui.volume.value = Math.round(this.volume * 100)
+      ui.volumeValue.textContent = Math.round(this.volume * 100) + '%'
+      this.setVolume(this.volume)
+
+      ui.volume.addEventListener('input', function () {
+        let value = Number(ui.volume.value)
+        sound.setVolume(value / 100)
+        ui.volumeValue.textContent = Math.round(sound.volume * 100) + '%'
+      })
+    },
+
+    setVolume: function (value01) {
+      if (!Number.isFinite(value01)) return
+
+      this.volume = Math.max(0, Math.min(1, value01))
+
+      if (this.masterGain && this.context) {
+        let now = this.context.currentTime
+
+        this.masterGain.gain.cancelScheduledValues(now)
+        this.masterGain.gain.setTargetAtTime(this.volume, now, 0.15)
+      }
+    },
+
+    playTone: function (frequency, duration) {
+      if (!this.enabled || !this.context || !this.masterGain) return
+
+      if (this.context.state === 'suspended') {
+        this.context.resume()
+      }
+      let oscillator = this.context.createOscillator()
+      let gainNode = this.context.createGain()
+      let now = this.context.currentTime
+
+      oscillator.type = 'sine'
+      oscillator.frequency.setValueAtTime(frequency, now)
+
+      gainNode.gain.setValueAtTime(0.001, now)
+      gainNode.gain.exponentialRampToValueAtTime(this.volume, now + 0.02)
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + duration + 0.02)
+
+      oscillator.connect(gainNode)
+      gainNode.connect(this.masterGain)
+
+      oscillator.start(now)
+      oscillator.stop(now + duration + 0.02)
+
+      oscillator.onended = function () {
+        oscillator.disconnect()
+        gainNode.disconnect()
+      }
+    },
+
+    play: function (eventName) {
+      if (!this.enabled) return
+
+      switch (eventName) {
+        case 'flip':
+          this.playTone(500, 0.12)
+          break
+        case 'match':
+          this.playTone(700, 0.1)
+          this.playTone(900, 0.12)
+          break
+        case 'mismatch':
+          this.playTone(200, 0.2)
+          break
+        case 'win':
+          this.playTone(600, 0.15)
+          this.playTone(800, 0.2)
+          this.playTone(1000, 0.25)
+          break
+      }
+    },
+  }
 
   const game = {
     firstTile: null,
@@ -69,6 +175,7 @@
     },
 
     init: function () {
+      sound.init()
       this.bindEvents()
       this.startNewGame()
     },
@@ -196,6 +303,8 @@
         this.startTimer()
       }
       tile.classList.add('is-flipped')
+      sound.play('flip')
+
       if (!state.firstTile) {
         state.firstTile = tile
         return
@@ -238,6 +347,7 @@
       let state = this.state
       state.firstTile.classList.add('is-matched')
       state.secondTile.classList.add('is-matched')
+      sound.play('match')
 
       state.matchedPairs += 1
       ui.pairs.textContent = state.matchedPairs + '/' + this.totalPairs
@@ -256,6 +366,7 @@
         self.state.firstTile.classList.remove('is-flipped')
         self.state.secondTile.classList.remove('is-flipped')
         self.clearSelection()
+        sound.play('mismatch')
       }, 700)
     },
 
@@ -267,6 +378,7 @@
 
     showWin: function () {
       clearInterval(this.state.timerId)
+      sound.play('win')
 
       ui.winText.textContent =
         'Moves: ' +
